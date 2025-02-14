@@ -28,44 +28,50 @@ import {
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/axios";
 
-const signupSchema = z.object({
-  firstName: z.string().trim().min(1, {
-    message: "O nome é obrigatório",
-  }),
-  lastName: z.string().trim().min(1, {
-    message: "O sobrenome é obrigatório",
-  }),
-  email: z
-    .string()
-    .email({
-      message: "O email é inválido",
-    })
-    .trim()
-    .min(1, {
-      message: "O email é obrigatório",
+const signupSchema = z
+  .object({
+    firstName: z.string().trim().min(1, {
+      message: "O nome é obrigatório",
     }),
-  password: z.string().trim().min(6, {
-    message: "A senha deve ter no mínimo 6 caracteres",
-  }),
-  confirmPassword: z.string().trim().min(6, {
-    message: "A confirmação de senha deve ter no mínimo 6 caracteres",
-  }),
-  terms: z.boolean().refine((value) => value, {
-    message: "Você deve aceitar os termos de uso e política de privacidade",
-  }),
-});
+    lastName: z.string().trim().min(1, {
+      message: "O sobrenome é obrigatório",
+    }),
+    email: z
+      .string()
+      .email({
+        message: "O email é inválido",
+      })
+      .trim()
+      .min(1, {
+        message: "O email é obrigatório",
+      }),
+    password: z.string().trim().min(6, {
+      message: "A senha deve ter no mínimo 6 caracteres",
+    }),
+    confirmPassword: z.string().trim().min(6, {
+      message: "A confirmação de senha deve ter no mínimo 6 caracteres",
+    }),
+    terms: z.boolean().refine((value) => value, {
+      message: "Você deve aceitar os termos de uso e política de privacidade",
+    }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "As senhas não coincidem",
+    path: ["confirmPassword"],
+  });
 
 const SignupPage = () => {
-  const [user, setUser] = useState({
-    firstName: "Jhoe",
-    lastName: "Doe",
-    email: "test@gmail.com",
-    password: "123456",
-    tokens: {
-      accessToken: "123456",
-      refreshToken: "123456",
-    },
-  });
+  const [user, setUser] = useState(null);
+  // const [user, setUser] = useState({
+  //   firstName: "Jhoe",
+  //   lastName: "Doe",
+  //   email: "test@gmail.com",
+  //   password: "123456",
+  //   tokens: {
+  //     accessToken: "123456",
+  //     refreshToken: "123456",
+  //   },
+  // });
 
   const { mutate } = useMutation({
     mutationKey: ["signup"],
