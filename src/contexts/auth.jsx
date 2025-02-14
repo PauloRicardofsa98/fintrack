@@ -8,6 +8,7 @@ export const AuthContext = createContext({
   user: null,
   login: () => {},
   signup: () => {},
+  isInitializing: true,
 });
 
 export const useAuthContext = () => {
@@ -18,8 +19,21 @@ export const useAuthContext = () => {
   return context;
 };
 
+const LOCAL_STORAGE_ACCESS_TOKEN_KEY = "accessToken";
+const LOCAL_STORAGE_REFRESH_TOKEN_KEY = "refreshToken";
+
+const setTokens = ({ accessToken, refreshToken }) => {
+  localStorage.setItem(LOCAL_STORAGE_ACCESS_TOKEN_KEY, accessToken);
+  localStorage.setItem(LOCAL_STORAGE_REFRESH_TOKEN_KEY, refreshToken);
+};
+const removeTokens = () => {
+  localStorage.removeItem(LOCAL_STORAGE_ACCESS_TOKEN_KEY);
+  localStorage.removeItem(LOCAL_STORAGE_REFRESH_TOKEN_KEY);
+};
+
 export const AuthContextProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   const { mutate: loginMutate } = useMutation({
     mutationKey: ["login"],
@@ -47,8 +61,13 @@ export const AuthContextProvider = ({ children }) => {
   useEffect(() => {
     const init = async () => {
       try {
-        const accessToken = localStorage.getItem("accessToken");
-        const refreshToken = localStorage.getItem("refreshToken");
+        setIsInitializing(true);
+        const accessToken = localStorage.getItem(
+          LOCAL_STORAGE_ACCESS_TOKEN_KEY,
+        );
+        const refreshToken = localStorage.getItem(
+          LOCAL_STORAGE_REFRESH_TOKEN_KEY,
+        );
         if (!accessToken && !refreshToken) return;
 
         const response = await api.get("/users/me", {
@@ -58,9 +77,11 @@ export const AuthContextProvider = ({ children }) => {
         });
         setUser(response.data);
       } catch (error) {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
+        removeTokens();
+        setUser(null);
         console.log(error);
+      } finally {
+        setIsInitializing(false);
       }
     };
     init();
@@ -71,17 +92,13 @@ export const AuthContextProvider = ({ children }) => {
       { email, password },
       {
         onSuccess: (loginUser) => {
-          const accessToken = loginUser.tokens.accessToken;
-          const refreshToken = loginUser.tokens.refreshToken;
-          localStorage.setItem("accessToken", accessToken);
-          localStorage.setItem("refreshToken", refreshToken);
+          setTokens(loginUser.tokens);
           setUser(loginUser);
 
           toast.success("Login realizado com sucesso");
         },
         onError: (error) => {
-          localStorage.removeItem("accessToken");
-          localStorage.removeItem("refreshToken");
+          removeTokens();
           toast.error(error.message);
         },
       },
@@ -90,21 +107,19 @@ export const AuthContextProvider = ({ children }) => {
   const signup = async (data) => {
     signupMutate(data, {
       onSuccess: (createdUser) => {
-        const accessToken = createdUser.tokens.accessToken;
-        const refreshToken = createdUser.tokens.refreshToken;
-        localStorage.setItem("accessToken", accessToken);
-        localStorage.setItem("refreshToken", refreshToken);
+        setTokens(createdUser.tokens);
         setUser(createdUser);
         toast.success("Conta criada com sucesso!");
       },
       onError: () => {
+        removeTokens();
         toast.error("Erro ao criar conta");
       },
     });
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup }}>
+    <AuthContext.Provider value={{ user, login, signup, isInitializing }}>
       {children}
     </AuthContext.Provider>
   );
