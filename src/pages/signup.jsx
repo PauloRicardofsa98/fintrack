@@ -1,6 +1,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router";
+import { toast } from "sonner";
 import { z } from "zod";
 
 import PasswordInput from "@/components/password-input";
@@ -23,6 +26,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { api } from "@/lib/axios";
 
 const signupSchema = z.object({
   firstName: z.string().trim().min(1, {
@@ -52,6 +56,30 @@ const signupSchema = z.object({
 });
 
 const SignupPage = () => {
+  const [user, setUser] = useState({
+    firstName: "Jhoe",
+    lastName: "Doe",
+    email: "test@gmail.com",
+    password: "123456",
+    tokens: {
+      accessToken: "123456",
+      refreshToken: "123456",
+    },
+  });
+
+  const { mutate } = useMutation({
+    mutationKey: ["signup"],
+    mutationFn: async ({ firstName, lastName, email, password }) => {
+      const response = await api.post("/users", {
+        firstName,
+        lastName,
+        email,
+        password,
+      });
+      return response.data;
+    },
+  });
+
   const form = useForm({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -65,8 +93,24 @@ const SignupPage = () => {
   });
 
   const onSubmit = (data) => {
-    console.log(data);
+    mutate(data, {
+      onSuccess: (createdUser) => {
+        const accessToken = createdUser.tokens.accessToken;
+        const refreshToken = createdUser.tokens.refreshToken;
+        localStorage.setItem("accessToken", accessToken);
+        localStorage.setItem("refreshToken", refreshToken);
+        setUser(createdUser);
+        toast.success("Conta criada com sucesso!");
+      },
+      onError: () => {
+        toast.error("Erro ao criar conta");
+      },
+    });
   };
+
+  if (user) {
+    return <h1>{user.firstName}</h1>;
+  }
 
   return (
     <div className="flex h-screen w-screen flex-col items-center justify-center gap-3">
